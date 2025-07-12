@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Juliano | ein Tool</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+        <link rel="stylesheet" href="index.css">
+    </head>
+<header>
+    <a href="index.html" class="logo">Juliano</a>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a class="active" href="verschluesseln.html">ein Tool</a>
+        <a href="#">Contact</a>
+        <a href="blog.html">Blog</a>
+    </nav>
+</header>
+<body>
+    <div class="container">
+        <!-- Hauptmenü -->
+        <div id="mainMenu" class="menu">
+            <button id="menuGenerateKeyBtn">Schlüssel generieren</button>
+            <button id="menuEncryptBtn">Nachricht verschlüsseln</button>
+            <button id="menuDecryptBtn">Nachricht entschlüsseln</button>
+        </div>
+
+        <!-- Schlüssel generieren -->
+        <div id="generateKeySection" class="hidden section-content">
+            <h2>Schlüssel generieren</h2>
+            <button id="generateKeyBtn">Schlüssel generieren</button>
+            <textarea id="keyDisplay" readonly placeholder="Schlüssel (hex)"></textarea>
+            <button id="backToMenuBtnGenerate">Zurück zum Hauptmenü</button>
+        </div>
+
+        <!-- Nachricht verschlüsseln -->
+        <div id="encryptSection" class="hidden section-content">
+            <h2>Nachricht verschlüsseln</h2>
+            <input type="text" id="keyInputEncrypt" placeholder="Gib Schlüssel (hex) ein (64 Zeichen für AES-256)">
+            <input type="text" id="messageInput" placeholder="Nachricht eingeben">
+            <button id="encryptBtn">Verschlüsseln</button>
+            <textarea id="encryptedMessageDisplay" readonly placeholder="Verschlüsselte Nachricht (hex)"></textarea>
+            <button id="backToMenuBtnEncrypt">Zurück zum Hauptmenü</button>
+        </div>
+
+        <!-- Nachricht entschlüsseln -->
+        <div id="decryptSection" class="hidden section-content">
+            <h2>Nachricht entschlüsseln</h2>
+            <input type="text" id="keyInputDecrypt" placeholder="Gib Schlüssel (hex) ein (64 Zeichen für AES-256)">
+            <textarea id="cipherInput" placeholder="Verschlüsselte Nachricht (hex)"></textarea>
+            <button id="decryptBtn">Entschlüsseln</button>
+            <textarea id="decryptedMessageDisplay" readonly placeholder="Entschlüsselte Nachricht"></textarea>
+            <button id="backToMenuBtnDecrypt">Zurück zum Hauptmenü</button>
+        </div>
+    </div>
+    <script>
+        // Event-Listener für Menütasten
+        document.getElementById('menuGenerateKeyBtn').addEventListener('click', () => showSection('generateKeySection'));
+        document.getElementById('menuEncryptBtn').addEventListener('click', () => showSection('encryptSection'));
+        document.getElementById('menuDecryptBtn').addEventListener('click', () => showSection('decryptSection'));
+        
+        // Event-Listener für Aktionsbuttons
+        document.getElementById('generateKeyBtn').addEventListener('click', generateKey);
+        document.getElementById('encryptBtn').addEventListener('click', encryptMessage);
+        document.getElementById('decryptBtn').addEventListener('click', decryptMessage);
+
+        // Event-Listener für Zurück-Buttons
+        document.getElementById('backToMenuBtnGenerate').addEventListener('click', () => backToMenu('generateKeySection'));
+        document.getElementById('backToMenuBtnEncrypt').addEventListener('click', () => backToMenu('encryptSection'));
+        document.getElementById('backToMenuBtnDecrypt').addEventListener('click', () => backToMenu('decryptSection'));
+
+        let aesKey;
+        let iv;
+
+        function showSection(sectionId) {
+            document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+        }
+
+        function backToMenu(sectionId) {
+            // Felder leeren
+            if (sectionId === 'generateKeySection') {
+                document.getElementById('keyDisplay').value = '';
+            } else if (sectionId === 'encryptSection') {
+                document.getElementById('keyInputEncrypt').value = '';
+                document.getElementById('messageInput').value = '';
+                document.getElementById('encryptedMessageDisplay').value = '';
+            } else if (sectionId === 'decryptSection') {
+                document.getElementById('keyInputDecrypt').value = '';
+                document.getElementById('cipherInput').value = '';
+                document.getElementById('decryptedMessageDisplay').value = '';
+            }
+            showSection('mainMenu');
+        }
+
+        async function generateKey() {
+            aesKey = await crypto.subtle.generateKey(
+                {
+                    name: "AES-CBC",
+                    length: 256
+                },
+                true,
+                ["encrypt", "decrypt"]
+            );
+
+            const exportedKey = await crypto.subtle.exportKey("raw", aesKey);
+            document.getElementById('keyDisplay').value = arrayBufferToHex(exportedKey);
+        }
+
+        async function encryptMessage() {
+            iv = crypto.getRandomValues(new Uint8Array(16));
+            const keyInput = document.getElementById('keyInputEncrypt').value;
+            if (keyInput.length === 64) {
+                const keyBuffer = hexToArrayBuffer(keyInput);
+                aesKey = await crypto.subtle.importKey(
+                    "raw",
+                    keyBuffer,
+                    { name: "AES-CBC" },
+                    true,
+                    ["encrypt"]
+                );
+            }
+            if (!aesKey) {
+                alert('Bitte generiere einen Schlüssel zuerst.');
+                return;
+            }
+            
+            const message = document.getElementById('messageInput').value;
+            const encodedMessage = new TextEncoder().encode(message);
+            
+            const encrypted = await crypto.subtle.encrypt(
+                {
+                    name: "AES-CBC",
+                    iv: iv
+                },
+                aesKey,  // Verwende den generierten oder importierten Schlüssel
+                encodedMessage
+            );
+
+            document.getElementById('encryptedMessageDisplay').value = arrayBufferToHex(iv) + arrayBufferToHex(encrypted);
+        }
+
+        async function decryptMessage() {
+            const keyInput = document.getElementById('keyInputDecrypt').value;
+            if (keyInput.length !== 64) {
+                alert('Der Schlüssel muss 64 hexadezimale Zeichen lang sein.');
+                return;
+            }
+            const keyBuffer = hexToArrayBuffer(keyInput);
+            const encryptionKey = await crypto.subtle.importKey(
+                "raw",
+                keyBuffer,
+                { name: "AES-CBC" },
+                true,
+                ["decrypt"]
+            );
+
+            const hexCipher = document.getElementById('cipherInput').value;
+            if (hexCipher.length < 64) {
+                alert('Die verschlüsselte Nachricht ist zu kurz.');
+                return;
+            }
+
+            try {
+                const iv = hexToArrayBuffer(hexCipher.slice(0, 32));
+                const encryptedData = hexToArrayBuffer(hexCipher.slice(32));
+                
+                const decrypted = await crypto.subtle.decrypt(
+                    {
+                        name: "AES-CBC",
+                        iv: iv
+                    },
+                    encryptionKey,
+                    encryptedData
+                );
+
+                document.getElementById('decryptedMessageDisplay').value = new TextDecoder().decode(decrypted);
+            } catch (e) {
+                alert('Entschlüsselung fehlgeschlagen. Überprüfe den Schlüssel und die verschlüsselte Nachricht.');
+                console.error(e);
+            }
+        }
+
+        function arrayBufferToHex(buffer) {
+            return Array.from(new Uint8Array(buffer))
+                        .map(b => b.toString(16).padStart(2, '0'))
+                        .join('');
+        }
+
+        function hexToArrayBuffer(hex) {
+            const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+            return bytes.buffer;
+        }
+    </script>
+</body>
+</html>
