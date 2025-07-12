@@ -92,7 +92,7 @@ nav a.active {
 }
 
 .typing-text span::before{
-    content: "software Developer";
+    content: "Developer";
     color: #b74b4b;
     animation: words 20s infinite;
 }
@@ -116,16 +116,16 @@ nav a.active {
 
 @keyframes words{
     0%, 25%{
-        content: "Web Developer";
+        content: "Developer";
     }
     26%, 50%{
-        content: "Developer";
+        content: "Scripter";
     }
     51%, 75%{
-        content: "Script Writer";
+        content: "Developer";
     }
     76%, 80%{
-        content: "Developer";
+        content: "Scripter";
     }
 }
 
@@ -200,7 +200,6 @@ button:hover {
     color: #000;
 }
 
-/* Eingabefelder */
 input[type="text"],
 textarea {
     width: 100%;
@@ -217,12 +216,10 @@ textarea {
     min-height: 100px;
 }
 
-/* Versteckt */
 .hidden {
     display: none;
 }
 
-/* ========== ANIMATIONEN ========== */
 @keyframes slideRight {
     from { transform: translateX(-100px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
@@ -238,7 +235,6 @@ textarea {
     to { opacity: 1; }
 }
 
-/* ========== RESPONSIVE DESIGN ========== */
 @media screen and (max-width: 768px) {
     .home {
         flex-direction: column;
